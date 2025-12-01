@@ -226,3 +226,16 @@ class UserPreference(UserPreferenceBase):
     """Schema representing persisted user preferences."""
     id: int = Field(..., description="Primary key")
     created_at: datetime = Field(..., description="Creation timestamp")
+
+
+class UploadResponse(BaseModel):
+    """Response model for successful upload."""
+
+    analysisId: int = Field(..., description="Created analysis ID for polling.")
+
+
+class AnalysisStatus(BaseModel):
+    """Response model for analysis status requests."""
+
+    status: str = Field(..., description="Current status of the analysis")
+    score_overall: Optional[float] = Field(None, description="Overall score if completed")

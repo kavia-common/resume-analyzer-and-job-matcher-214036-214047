@@ -1,29 +1,29 @@
-from fastapi import APIRouter, File, UploadFile, Form, HTTPException, BackgroundTasks, Depends
 from typing import Annotated
 
-from src.services.analysis_orchestrator import AnalysisOrchestratorService
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    UploadFile,
+)
+
+from src.domain.schemas import UploadResponse
 from src.repositories.resumes import ResumeRepository
+from src.services.analysis_orchestrator import AnalysisOrchestratorService
 
 router = APIRouter()
 
 
-def get_resume_repo() -> ResumeRepository:
-    return ResumeRepository()
-
-
-def get_orchestrator_service() -> AnalysisOrchestratorService:
-    return AnalysisOrchestratorService()
-
-
-@router.post("/resumes/upload", tags=["Resumes"], status_code=201)
+@router.post("/resumes/upload", tags=["Resumes"], status_code=201, response_model=UploadResponse)
 async def upload_resume(
     background_tasks: BackgroundTasks,
     file: Annotated[UploadFile, File()],
-    user_id: Annotated[int, Form()],
-    resume_repo: Annotated[ResumeRepository, Depends(get_resume_repo)],
-    orchestrator: Annotated[
-        AnalysisOrchestratorService, Depends(get_orchestrator_service)
-    ],
+    userId: Annotated[int, Form()],
+    resume_repo: ResumeRepository = Depends(),
+    orchestrator: AnalysisOrchestratorService = Depends(),
 ):
     """
     Upload a resume file, parse it, and create an analysis.
@@ -40,16 +40,16 @@ async def upload_resume(
 
     # 1. Create the resume record first
     resume_id = await resume_repo.create(
-        user_id=user_id, source="upload", url=file.filename, content_text=content_text
+        user_id=userId, source="upload", url=file.filename, content_text=content_text
     )
 
     # 2. Start the analysis in the background
     analysis_id = await orchestrator.start_analysis_for_resume(
-        user_id=user_id,
+        user_id=userId,
         resume_id=resume_id,
         text=content_text,
         background_tasks=background_tasks,
     )
 
     # 3. Return the analysis ID for the client to poll
-    return {"analysis_id": analysis_id}
+    return UploadResponse(analysisId=analysis_id)

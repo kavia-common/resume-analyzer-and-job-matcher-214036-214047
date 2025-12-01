@@ -1,36 +1,44 @@
-from fastapi import APIRouter, Path, Body
 from typing import List
 
+from fastapi import APIRouter, Body, Depends, HTTPException, Path
+
+from src.domain.schemas import Analysis, AnalysisStatus
 from src.repositories.analyses import AnalysisRepository
 from src.repositories.findings import FindingRepository
 from src.repositories.suggestions import SuggestionRepository
-from src.domain.schemas import Analysis
 
 router = APIRouter()
 
 
-@router.get("/analysis/{id}/status", tags=["Analysis"])
-async def get_analysis_status(analysis_id: int = Path(..., alias="id")):
+@router.get("/analysis/{id}/status", tags=["Analysis"], response_model=AnalysisStatus)
+async def get_analysis_status(
+    analysis_id: int = Path(..., alias="id"), repo: AnalysisRepository = Depends()
+):
     """
     Get the status of an analysis.
     """
-    repo = AnalysisRepository()
     analysis = await repo.get(analysis_id)
     if not analysis:
-        return {"status": "not_found"}
-    return {"status": analysis["status"]}
+        raise HTTPException(status_code=404, detail="Analysis not found.")
+    return AnalysisStatus(
+        status=analysis["status"], score_overall=analysis.get("score_overall")
+    )
 
 
 @router.get("/analysis/{id}/results", tags=["Analysis"])
-async def get_analysis_results(analysis_id: int = Path(..., alias="id")):
+async def get_analysis_results(
+    analysis_id: int = Path(..., alias="id"),
+    analysis_repo: AnalysisRepository = Depends(),
+    findings_repo: FindingRepository = Depends(),
+    suggestions_repo: SuggestionRepository = Depends(),
+):
     """
     Get the full results of a completed analysis.
     """
-    analysis_repo = AnalysisRepository()
-    findings_repo = FindingRepository()
-    suggestions_repo = SuggestionRepository()
-
     analysis = await analysis_repo.get(analysis_id)
+    if not analysis:
+        raise HTTPException(status_code=404, detail="Analysis not found.")
+
     findings = await findings_repo.list_by_analysis(analysis_id)
     suggestions = await suggestions_repo.list_by_analysis(analysis_id)
 
@@ -38,7 +46,9 @@ async def get_analysis_results(analysis_id: int = Path(..., alias="id")):
 
 
 @router.post("/analysis/{id}/suggestions/ack", tags=["Analysis"], status_code=204)
-async def acknowledge_suggestion(analysis_id: int = Path(..., alias="id"), suggestion_id: int = Body(..., embed=True)):
+async def acknowledge_suggestion(
+    analysis_id: int = Path(..., alias="id"), suggestion_id: int = Body(..., embed=True)
+):
     """
     Acknowledge a suggestion.
     """
@@ -48,20 +58,25 @@ async def acknowledge_suggestion(analysis_id: int = Path(..., alias="id"), sugge
 
 
 @router.post("/analysis/{id}/cancel", tags=["Analysis"], status_code=204)
-async def cancel_analysis(analysis_id: int = Path(..., alias="id")):
+async def cancel_analysis(
+    analysis_id: int = Path(..., alias="id"), repo: AnalysisRepository = Depends()
+):
     """
     Cancel an ongoing analysis.
     """
-    repo = AnalysisRepository()
+    analysis = await repo.get(analysis_id)
+    if not analysis:
+        raise HTTPException(status_code=404, detail="Analysis not found.")
     await repo.update_status(analysis_id, "cancelled")
     return
 
 
 @router.get("/users/{userId}/analyses", tags=["Users"], response_model=List[Analysis])
-async def get_user_analyses(user_id: int = Path(..., alias="userId")):
+async def get_user_analyses(
+    user_id: int = Path(..., alias="userId"), repo: AnalysisRepository = Depends()
+):
     """
     Get all analyses for a user.
     """
-    repo = AnalysisRepository()
     analyses = await repo.list_by_user(user_id)
     return analyses

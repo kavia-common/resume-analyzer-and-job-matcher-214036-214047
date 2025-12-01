@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from fastapi import BackgroundTasks
+from fastapi import BackgroundTasks, Depends
 
 from src.repositories.analyses import AnalysisRepository
 from src.repositories.findings import FindingRepository
@@ -18,15 +18,25 @@ from src.services.recommendations import score_job_match, apply_user_preferences
 class AnalysisOrchestratorService:
     """Coordinates analysis pipeline: ATS checks, skills extraction, suggestions, and recommendations."""
 
-    def __init__(self) -> None:
-        self.analyses = AnalysisRepository()
-        self.findings = FindingRepository()
-        self.skills = SkillRepository()
-        self.analysis_skills = AnalysisSkillRepository()
-        self.suggestions = SuggestionRepository()
-        self.jobs = JobRepository()
-        self.recs = RecommendationRepository()
-        self.prefs = UserPreferenceRepository()
+    def __init__(
+        self,
+        analyses: AnalysisRepository = Depends(),
+        findings: FindingRepository = Depends(),
+        skills: SkillRepository = Depends(),
+        analysis_skills: AnalysisSkillRepository = Depends(),
+        suggestions: SuggestionRepository = Depends(),
+        jobs: JobRepository = Depends(),
+        recs: RecommendationRepository = Depends(),
+        prefs: UserPreferenceRepository = Depends(),
+    ) -> None:
+        self.analyses = analyses
+        self.findings = findings
+        self.skills = skills
+        self.analysis_skills = analysis_skills
+        self.suggestions = suggestions
+        self.jobs = jobs
+        self.recs = recs
+        self.prefs = prefs
 
     async def _run_analysis_pipeline(self, analysis_id: int, user_id: int, text: Optional[str]) -> None:
         """The core analysis pipeline. To be run as a background task or synchronously."""
