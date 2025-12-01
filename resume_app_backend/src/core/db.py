@@ -35,6 +35,7 @@ async def init_db_pool() -> Optional[asyncpg.Pool]:
             max_size=10,
             timeout=10.0,
             command_timeout=30.0,
+            ssl=False,
         )
         logger.info("Database pool initialized.")
     except Exception as exc:

@@ -25,11 +25,11 @@ class Settings(BaseSettings):
         description="PostgreSQL connection URL; if absent, a fallback is constructed from POSTGRES_* vars.",
     )
     # Defaults are None to avoid fabricating unusable DSNs. We'll construct only when all pieces exist.
-    POSTGRES_USER: Optional[str] = Field(default=None, description="PostgreSQL username for fallback DSN")
-    POSTGRES_PASSWORD: Optional[str] = Field(default=None, description="PostgreSQL password for fallback DSN")
-    POSTGRES_HOST: Optional[str] = Field(default=None, description="PostgreSQL host for fallback DSN")
-    POSTGRES_PORT: Optional[int] = Field(default=None, description="PostgreSQL port for fallback DSN")
-    POSTGRES_DB: Optional[str] = Field(default=None, description="PostgreSQL database name for fallback DSN")
+    POSTGRES_USER: Optional[str] = Field(default="appuser", description="PostgreSQL username for fallback DSN")
+    POSTGRES_PASSWORD: Optional[str] = Field(default="dbuser123", description="PostgreSQL password for fallback DSN")
+    POSTGRES_HOST: Optional[str] = Field(default="localhost", description="PostgreSQL host for fallback DSN")
+    POSTGRES_PORT: Optional[int] = Field(default=5000, description="PostgreSQL port for fallback DSN")
+    POSTGRES_DB: Optional[str] = Field(default="myapp", description="PostgreSQL database name for fallback DSN")
 
     # CORS
     BACKEND_CORS_ORIGINS: Optional[str] = Field(
