@@ -104,7 +104,6 @@ class AnalysisOrchestratorService:
             logger.error(f"Analysis pipeline failed for analysis_id='{analysis_id}': {e}", exc_info=True)
             await self.analyses.update_status(analysis_id, status="failed", score_overall=None)
             # In a real app, you'd have more robust error logging here.
-            raise
 
     # PUBLIC_INTERFACE
     async def start_analysis_for_resume(

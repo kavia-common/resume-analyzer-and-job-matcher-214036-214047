@@ -64,22 +64,34 @@ async def upload_resume(
             detail="Invalid file type. Please upload a PDF, DOC, DOCX, or TXT file.",
         )
 
+    content_text: str | None = None
     try:
         content = await file.read()
-        # Basic text extraction, a real implementation would use a library like textract
-        content_text = content.decode("utf-8", errors="ignore")
+        if file.content_type == "text/plain":
+            try:
+                content_text = content.decode("utf-8")
+            except UnicodeDecodeError:
+                content_text = content.decode("latin-1")
+        else:
+            logger.warning(
+                f"Attempting basic text extraction from binary file type '{file.content_type}'. "
+                "A dedicated library is needed for reliable results."
+            )
+            content_text = content.decode("utf-8", errors="replace").replace("\ufffd", " ")
+
     except Exception as e:
         logger.error(
             f"Error reading or decoding file '{file.filename}' for user {user_id}: {e}",
             exc_info=True,
         )
         raise HTTPException(
-            status_code=422, detail=f"Error reading or decoding file: {e}"
+            status_code=422, detail=f"Error reading or processing file content: {e}"
         )
 
-    if not content_text.strip():
+    if not content_text or not content_text.strip():
         raise HTTPException(
-            status_code=422, detail="File appears to be empty or could not be read."
+            status_code=422,
+            detail="Could not extract text from file. It may be empty or in an unsupported format.",
         )
 
     try:

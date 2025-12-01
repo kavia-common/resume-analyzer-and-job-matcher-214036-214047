@@ -31,9 +31,10 @@ def run_verification():
             user_id = create_user_res.json()["id"]
             print(f"  [SUCCESS] Created user with ID: {user_id}")
 
-        # Create a dummy resume file in the same directory as the script
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        file_path = os.path.join(script_dir, FILE_NAME)
+        # Create a dummy resume file in a temporary directory
+        import tempfile
+        temp_dir = tempfile.gettempdir()
+        file_path = os.path.join(temp_dir, FILE_NAME)
         with open(file_path, "w") as f:
             f.write(FILE_CONTENT)
 
