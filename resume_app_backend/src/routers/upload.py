@@ -37,7 +37,7 @@ async def upload_resume(
     resume_repo: ResumeRepository = Depends(),
     user_repo: UserRepository = Depends(),
     orchestrator: AnalysisOrchestratorService = Depends(),
-):
+) -> UploadResponse:
     """
     Upload a resume file, parse it, and create an analysis.
     The analysis is run in the background. The response contains the ID for status polling.
@@ -49,8 +49,6 @@ async def upload_resume(
     if not user:
         raise HTTPException(status_code=422, detail=f"User with id '{user_id}' not found.")
 
-    if not user_id:
-        raise HTTPException(status_code=422, detail="user_id form field is required.")
     if not file or not file.filename:
         raise HTTPException(status_code=422, detail="A file upload is required.")
 
@@ -109,7 +107,7 @@ async def upload_resume(
         )
 
         # 3. Return the analysis ID for the client to poll
-        return {"analysis_id": analysis_id}
+        return UploadResponse(analysis_id=analysis_id)
     except Exception as e:
         logger.error(
             f"Critical error during resume processing for user '{user_id}': {e}",

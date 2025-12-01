@@ -8,15 +8,28 @@ BASE_URL = "http://localhost:8000"
 UPLOAD_URL = f"{BASE_URL}/api/v1/resumes/upload"
 STATUS_URL_TPL = f"{BASE_URL}/api/v1/analysis/{{analysis_id}}/status"
 RESULTS_URL_TPL = f"{BASE_URL}/api/v1/analysis/{{analysis_id}}/results"
-USER_ID = str(uuid.uuid4())
+CREATE_USER_URL = f"{BASE_URL}/dev/create-user"
+TEST_EMAIL = f"test-user-{uuid.uuid4()}@example.com"
 FILE_CONTENT = "This is a simple resume with skills like Python and Java."
 FILE_NAME = "test_resume.txt"
 
+
 def run_verification():
     """Runs the end-to-end verification flow."""
+    user_id = None
     try:
         print("--- Starting Verification ---")
-        print(f"User ID: {USER_ID}")
+
+        # 0. Create a user for the test
+        print(f"\n0. Creating user with email {TEST_EMAIL}...")
+        with httpx.Client(verify=False) as client:
+            create_user_res = client.post(CREATE_USER_URL, json={"email": TEST_EMAIL, "full_name": "Test User"})
+            if create_user_res.status_code != 200:
+                print(f"  [FAIL] Could not create user. Status: {create_user_res.status_code}")
+                print(f"  Response: {create_user_res.text}")
+                return
+            user_id = create_user_res.json()["id"]
+            print(f"  [SUCCESS] Created user with ID: {user_id}")
 
         # Create a dummy resume file in the same directory as the script
         script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -25,11 +38,11 @@ def run_verification():
             f.write(FILE_CONTENT)
 
         # 1. Upload resume
-        print(f"\n1. Uploading resume to {UPLOAD_URL}...")
+        print(f"\\n1. Uploading resume for user {user_id} to {UPLOAD_URL}...")
         with open(file_path, "rb") as f:
             files = {"file": (FILE_NAME, f, "text/plain")}
-            data = {"user_id": USER_ID}
-            
+            data = {"user_id": user_id}
+
             # Using verify=False to ignore SSL issues in test environments
             with httpx.Client(verify=False) as client:
                 response = client.post(UPLOAD_URL, files=files, data=data)
