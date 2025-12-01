@@ -28,8 +28,8 @@ app = FastAPI(
 # Load settings once
 settings = get_settings()
 
-# CORS configuration from settings; if empty, default to permissive for local dev
-cors_origins = settings.cors_origins() or ["*"]
+# CORS configuration from settings; default to http://localhost:3000 (handled in settings.cors_origins)
+cors_origins = settings.cors_origins()
 
 app.add_middleware(
     CORSMiddleware,
@@ -42,7 +42,7 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def on_startup() -> None:
-    """Initialize resources such as the database pool."""
+    """Initialize resources such as the database pool, if possible."""
     await init_db_pool()
 
 
@@ -55,11 +55,11 @@ async def on_shutdown() -> None:
 @app.get(
     "/",
     summary="Health Check",
-    description="Basic service and database health check.",
+    description="Basic service health check that does not require database connectivity.",
     tags=["Health"],
 )
 async def health_check() -> Dict[str, object]:
-    """Health check route that also verifies database connectivity."""
+    """Health check route that returns service status and DB readiness (if configured)."""
     db_ok = await health_check_db()
     return {"message": "Healthy", "database": db_ok}
 

@@ -6,7 +6,12 @@ from src.core.db import get_db_pool
 
 
 class BaseRepository:
-    """Lightweight async repository base for executing SQL with asyncpg."""
+    """Lightweight async repository base for executing SQL with asyncpg.
+
+    Note: This requires an initialized DB pool. If the service is started without a
+    database, attempting to construct a repository will raise an error indicating
+    the pool is not initialized.
+    """
 
     def __init__(self) -> None:
         self.pool = get_db_pool()

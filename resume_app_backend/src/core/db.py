@@ -1,34 +1,45 @@
 import asyncio
+import logging
 from typing import Optional
 
 import asyncpg
 
 from src.core.config import get_settings
 
+logger = logging.getLogger(__name__)
+
 _pool: Optional[asyncpg.Pool] = None
 
 
 # PUBLIC_INTERFACE
-async def init_db_pool() -> asyncpg.Pool:
-    """Initialize and return a global asyncpg connection pool.
+async def init_db_pool() -> Optional[asyncpg.Pool]:
+    """Initialize and return a global asyncpg connection pool if a DSN is available.
 
-    Uses DATABASE_URL from settings. Safe to call multiple times;
-    subsequent calls will return the existing pool.
+    Safe to call multiple times; subsequent calls will return the existing pool.
+    Returns None if no usable DSN is configured.
     """
     global _pool
     if _pool is not None:
         return _pool
 
     settings = get_settings()
+    dsn = settings.database_dsn()
+    if not dsn:
+        logger.warning("DATABASE_URL not provided and POSTGRES_* insufficient; starting without database.")
+        return None
 
-    # Create a pool with reasonable defaults for API workloads
-    _pool = await asyncpg.create_pool(
-        dsn=str(settings.DATABASE_URL),
-        min_size=1,
-        max_size=10,
-        timeout=10.0,
-        command_timeout=30.0,
-    )
+    try:
+        _pool = await asyncpg.create_pool(
+            dsn=dsn,
+            min_size=1,
+            max_size=10,
+            timeout=10.0,
+            command_timeout=30.0,
+        )
+        logger.info("Database pool initialized.")
+    except Exception as exc:
+        logger.warning("Failed to initialize database pool: %s. Service will run without DB.", exc)
+        _pool = None
     return _pool
 
 
@@ -39,6 +50,7 @@ async def close_db_pool() -> None:
     if _pool is not None:
         await _pool.close()
         _pool = None
+        logger.info("Database pool closed.")
 
 
 # PUBLIC_INTERFACE
@@ -51,10 +63,11 @@ def get_db_pool() -> asyncpg.Pool:
 
 # PUBLIC_INTERFACE
 async def health_check_db() -> bool:
-    """Run a lightweight DB health check query. Returns True if OK."""
+    """Run a lightweight DB health check query. Returns True if OK; False if DB missing or unhealthy."""
     try:
-        pool = get_db_pool()
-        async with pool.acquire() as conn:
+        if _pool is None:
+            return False
+        async with _pool.acquire() as conn:
             val = await conn.fetchval("SELECT 1;")
             return val == 1
     except Exception:
