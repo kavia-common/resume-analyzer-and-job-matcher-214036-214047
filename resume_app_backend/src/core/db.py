@@ -25,7 +25,7 @@ async def init_db_pool() -> Optional[asyncpg.Pool]:
     settings = get_settings()
     dsn = settings.database_dsn()
     if not dsn:
-        logger.warning("DATABASE_URL not provided and POSTGRES_* insufficient; starting without database.")
+        logger.info("Database settings not provided; continuing without database.")
         return None
 
     try:
@@ -38,6 +38,7 @@ async def init_db_pool() -> Optional[asyncpg.Pool]:
         )
         logger.info("Database pool initialized.")
     except Exception as exc:
+        # Do not crash service; just run without DB
         logger.warning("Failed to initialize database pool: %s. Service will run without DB.", exc)
         _pool = None
     return _pool
@@ -55,9 +56,12 @@ async def close_db_pool() -> None:
 
 # PUBLIC_INTERFACE
 def get_db_pool() -> asyncpg.Pool:
-    """Return the current connection pool; raises if not initialized."""
+    """Return the current connection pool; raises if not initialized.
+
+    This is intentionally strict to ensure repositories fail fast if DB is unavailable.
+    """
     if _pool is None:
-        raise RuntimeError("Database pool is not initialized. Ensure app startup has run.")
+        raise RuntimeError("Database pool is not initialized. Ensure app startup has run and DB settings are configured.")
     return _pool
 
 

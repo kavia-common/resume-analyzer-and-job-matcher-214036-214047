@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import List, Optional
 
-from pydantic import Field, ValidationError
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,11 +24,12 @@ class Settings(BaseSettings):
         default=None,
         description="PostgreSQL connection URL; if absent, a fallback is constructed from POSTGRES_* vars.",
     )
-    POSTGRES_USER: Optional[str] = Field(default="appuser", description="PostgreSQL username for fallback DSN")
-    POSTGRES_PASSWORD: Optional[str] = Field(default="dbuser123", description="PostgreSQL password for fallback DSN")
-    POSTGRES_HOST: Optional[str] = Field(default="localhost", description="PostgreSQL host for fallback DSN")
-    POSTGRES_PORT: Optional[int] = Field(default=5000, description="PostgreSQL port for fallback DSN")
-    POSTGRES_DB: Optional[str] = Field(default="myapp", description="PostgreSQL database name for fallback DSN")
+    # Defaults are None to avoid fabricating unusable DSNs. We'll construct only when all pieces exist.
+    POSTGRES_USER: Optional[str] = Field(default=None, description="PostgreSQL username for fallback DSN")
+    POSTGRES_PASSWORD: Optional[str] = Field(default=None, description="PostgreSQL password for fallback DSN")
+    POSTGRES_HOST: Optional[str] = Field(default=None, description="PostgreSQL host for fallback DSN")
+    POSTGRES_PORT: Optional[int] = Field(default=None, description="PostgreSQL port for fallback DSN")
+    POSTGRES_DB: Optional[str] = Field(default=None, description="PostgreSQL database name for fallback DSN")
 
     # CORS
     BACKEND_CORS_ORIGINS: Optional[str] = Field(
@@ -63,11 +64,11 @@ class Settings(BaseSettings):
 
         Priority:
         1) Use DATABASE_URL if provided.
-        2) Construct DSN from POSTGRES_* values with sane local defaults.
+        2) Construct DSN from POSTGRES_* values if all are present.
         """
         if self.DATABASE_URL:
             return self.DATABASE_URL
-        if self.POSTGRES_USER and self.POSTGRES_PASSWORD and self.POSTGRES_HOST and self.POSTGRES_PORT and self.POSTGRES_DB:
+        if all([self.POSTGRES_USER, self.POSTGRES_PASSWORD, self.POSTGRES_HOST, self.POSTGRES_PORT, self.POSTGRES_DB]):
             return (
                 f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
                 f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
@@ -78,9 +79,9 @@ class Settings(BaseSettings):
 # PUBLIC_INTERFACE
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    """Load and cache application settings from environment/.env without forcing DB validation."""
-    try:
-        return Settings()  # type: ignore[call-arg]
-    except ValidationError as exc:
-        # Raise a clear error to help during boot
-        raise RuntimeError(f"Invalid configuration: {exc}") from exc
+    """Load and cache application settings from environment/.env without forcing DB validation.
+
+    Intentionally avoids raising on missing DATABASE_URL/POSTGRES_* so the app can start without DB.
+    """
+    # BaseSettings already validates field types; we only avoid wrapping with RuntimeError
+    return Settings()  # type: ignore[call-arg]
