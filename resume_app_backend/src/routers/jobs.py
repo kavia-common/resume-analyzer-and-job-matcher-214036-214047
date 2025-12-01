@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import APIRouter, Query, Path
 
 from src.repositories.recommendations import RecommendationRepository
@@ -7,7 +8,7 @@ router = APIRouter()
 
 @router.get("/recommendations", tags=["Jobs"])
 async def get_recommendations(
-    analysis_id: int,
+    analysis_id: UUID,
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):

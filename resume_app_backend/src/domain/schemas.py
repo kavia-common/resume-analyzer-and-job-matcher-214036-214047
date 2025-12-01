@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
+from uuid import UUID
 from pydantic import BaseModel, Field, EmailStr
 
 
@@ -66,6 +67,7 @@ class Profile(ProfileBase):
 # PUBLIC_INTERFACE
 class AnalysisBase(BaseModel):
     """Base schema for an analysis run over a resume or profile."""
+    id: UUID = Field(..., description="Primary key")
     user_id: int = Field(..., description="Owner user id")
     resume_id: Optional[int] = Field(None, description="Analyzed resume id")
     profile_id: Optional[int] = Field(None, description="Analyzed profile id")
@@ -81,14 +83,13 @@ class AnalysisCreate(AnalysisBase):
 
 class Analysis(AnalysisBase):
     """Schema representing a persisted analysis run."""
-    id: int = Field(..., description="Primary key")
     created_at: datetime = Field(..., description="Creation timestamp")
 
 
 # PUBLIC_INTERFACE
 class FindingBase(BaseModel):
     """Base schema for an ATS finding result."""
-    analysis_id: int = Field(..., description="FK to analyses.id")
+    analysis_id: UUID = Field(..., description="FK to analyses.id")
     category: str = Field(..., description="Category (formatting, sections, keywords, etc.)")
     severity: str = Field(..., description="Severity (info, warning, error)")
     message: str = Field(..., description="Human-readable message")
@@ -127,7 +128,7 @@ class Skill(SkillBase):
 # PUBLIC_INTERFACE
 class AnalysisSkillBase(BaseModel):
     """Base schema for the relation of analysis and extracted skill."""
-    analysis_id: int = Field(..., description="FK analyses.id")
+    analysis_id: UUID = Field(..., description="FK analyses.id")
     skill_id: int = Field(..., description="FK skills.id")
     confidence: Optional[float] = Field(None, description="Confidence in extraction [0-1]")
 
@@ -146,7 +147,7 @@ class AnalysisSkill(AnalysisSkillBase):
 # PUBLIC_INTERFACE
 class SuggestionBase(BaseModel):
     """Base schema for a suggestion produced by analysis."""
-    analysis_id: int = Field(..., description="FK analyses.id")
+    analysis_id: UUID = Field(..., description="FK analyses.id")
     title: str = Field(..., description="Suggestion short title")
     message: str = Field(..., description="Detailed guidance")
     priority: str = Field(..., description="Priority (low, medium, high)")
@@ -190,7 +191,7 @@ class Job(JobBase):
 # PUBLIC_INTERFACE
 class RecommendationBase(BaseModel):
     """Base schema for a recommendation linking analysis and job."""
-    analysis_id: int = Field(..., description="FK analyses.id")
+    analysis_id: UUID = Field(..., description="FK analyses.id")
     job_id: int = Field(..., description="FK jobs.id")
     score: float = Field(..., description="Match score [0-100]")
 
@@ -231,7 +232,7 @@ class UserPreference(UserPreferenceBase):
 class UploadResponse(BaseModel):
     """Response model for successful upload."""
 
-    analysis_id: int = Field(..., description="Created analysis ID for polling.")
+    analysis_id: UUID = Field(..., description="Created analysis ID for polling.")
 
 
 class AnalysisStatus(BaseModel):

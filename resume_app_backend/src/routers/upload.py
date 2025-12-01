@@ -32,23 +32,43 @@ async def upload_resume(
     if not file.filename:
         raise HTTPException(status_code=400, detail="No file provided.")
 
+    # Validate file type to some extent
+    if file.content_type not in [
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "text/plain",
+    ]:
+        raise HTTPException(
+            status_code=422,
+            detail="Invalid file type. Please upload a PDF, DOC, DOCX, or TXT file.",
+        )
+
     try:
         content = await file.read()
-        content_text = content.decode("utf-8")
+        # Basic text extraction, a real implementation would use a library like textract
+        content_text = content.decode("utf-8", errors="ignore")
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error reading or decoding file: {e}")
+        raise HTTPException(
+            status_code=422, detail=f"Error reading or decoding file: {e}"
+        )
+
+    if not content_text.strip():
+        raise HTTPException(
+            status_code=422, detail="File appears to be empty or could not be read."
+        )
 
     # 1. Create the resume record first
     resume_id = await resume_repo.create(
-        user_id=user_id, source="upload", url=file.filename, content_text=content_text
+        user_id=user_id,
+        source="upload",
+        url=file.filename,
+        content_text=content_text,
     )
 
     # 2. Start the analysis in the background
     analysis_id = await orchestrator.start_analysis_for_resume(
-        user_id=user_id,
-        resume_id=resume_id,
-        text=content_text,
-        background_tasks=background_tasks,
+        user_id=user_id, resume_id=resume_id, background_tasks=background_tasks
     )
 
     # 3. Return the analysis ID for the client to poll

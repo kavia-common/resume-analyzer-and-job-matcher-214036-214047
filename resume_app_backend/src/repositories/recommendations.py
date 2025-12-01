@@ -1,4 +1,5 @@
 from typing import List
+from uuid import UUID
 
 from src.repositories.base import BaseRepository
 
@@ -6,7 +7,7 @@ from src.repositories.base import BaseRepository
 class RecommendationRepository(BaseRepository):
     """CRUD operations for recommendations."""
 
-    async def create(self, analysis_id: int, job_id: int, score: float) -> int:
+    async def create(self, analysis_id: UUID, job_id: int, score: float) -> int:
         rec_id = await self.fetchval(
             """
             INSERT INTO recommendations (analysis_id, job_id, score)
@@ -19,7 +20,7 @@ class RecommendationRepository(BaseRepository):
         )
         return int(rec_id)
 
-    async def list_by_analysis(self, analysis_id: int) -> List[dict]:
+    async def list_by_analysis(self, analysis_id: UUID) -> List[dict]:
         rows = await self.fetch(
             "SELECT * FROM recommendations WHERE analysis_id = $1 ORDER BY score DESC;",
             analysis_id,
@@ -27,7 +28,7 @@ class RecommendationRepository(BaseRepository):
         return [dict(r) for r in rows]
 
     async def list_by_analysis_with_jobs(
-        self, analysis_id: int, limit: int, offset: int
+        self, analysis_id: UUID, limit: int, offset: int
     ) -> List[dict]:
         rows = await self.fetch(
             """

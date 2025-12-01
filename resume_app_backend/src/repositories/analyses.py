@@ -1,4 +1,5 @@
 from typing import List, Optional
+from uuid import UUID, uuid4
 
 from src.repositories.base import BaseRepository
 
@@ -14,13 +15,14 @@ class AnalysisRepository(BaseRepository):
         target_role: Optional[str],
         status: str,
         score_overall: Optional[float] = None,
-    ) -> int:
+    ) -> UUID:
         analysis_id = await self.fetchval(
             """
-            INSERT INTO analyses (user_id, resume_id, profile_id, target_role, status, score_overall)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO analyses (id, user_id, resume_id, profile_id, target_role, status, score_overall)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING id;
             """,
+            uuid4(),
             user_id,
             resume_id,
             profile_id,
@@ -28,13 +30,13 @@ class AnalysisRepository(BaseRepository):
             status,
             score_overall,
         )
-        return int(analysis_id)
+        return analysis_id
 
-    async def get(self, analysis_id: int) -> Optional[dict]:
+    async def get(self, analysis_id: UUID) -> Optional[dict]:
         rec = await self.fetchrow("SELECT * FROM analyses WHERE id = $1;", analysis_id)
         return self.record_to_dict(rec)
 
-    async def update_status(self, analysis_id: int, status: str, score_overall: Optional[float] = None) -> None:
+    async def update_status(self, analysis_id: UUID, status: str, score_overall: Optional[float] = None) -> None:
         await self.execute(
             "UPDATE analyses SET status = $1, score_overall = COALESCE($2, score_overall) WHERE id = $3;",
             status,

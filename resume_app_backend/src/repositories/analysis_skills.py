@@ -1,4 +1,5 @@
 from typing import List
+from uuid import UUID
 
 from src.repositories.base import BaseRepository
 
@@ -6,7 +7,7 @@ from src.repositories.base import BaseRepository
 class AnalysisSkillRepository(BaseRepository):
     """CRUD operations for analysis_skills (junction table)."""
 
-    async def create(self, analysis_id: int, skill_id: int, confidence: float | None) -> int:
+    async def create(self, analysis_id: UUID, skill_id: int, confidence: float | None) -> int:
         rec_id = await self.fetchval(
             """
             INSERT INTO analysis_skills (analysis_id, skill_id, confidence)
@@ -19,7 +20,7 @@ class AnalysisSkillRepository(BaseRepository):
         )
         return int(rec_id)
 
-    async def list_by_analysis(self, analysis_id: int) -> List[dict]:
+    async def list_by_analysis(self, analysis_id: UUID) -> List[dict]:
         rows = await self.fetch(
             """
             SELECT ask.*, s.name as skill_name, s.type as skill_type

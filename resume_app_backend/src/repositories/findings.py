@@ -1,4 +1,5 @@
 from typing import List, Optional
+from uuid import UUID
 
 from src.repositories.base import BaseRepository
 
@@ -8,7 +9,7 @@ class FindingRepository(BaseRepository):
 
     async def create(
         self,
-        analysis_id: int,
+        analysis_id: UUID,
         category: str,
         severity: str,
         message: str,
@@ -28,6 +29,6 @@ class FindingRepository(BaseRepository):
         )
         return int(finding_id)
 
-    async def list_by_analysis(self, analysis_id: int) -> List[dict]:
+    async def list_by_analysis(self, analysis_id: UUID) -> List[dict]:
         rows = await self.fetch("SELECT * FROM findings WHERE analysis_id = $1 ORDER BY created_at ASC;", analysis_id)
         return [dict(r) for r in rows]

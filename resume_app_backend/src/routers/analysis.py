@@ -1,4 +1,5 @@
 from typing import List
+from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path
 
@@ -12,7 +13,7 @@ router = APIRouter()
 
 @router.get("/analysis/{id}/status", tags=["Analysis"], response_model=AnalysisStatus)
 async def get_analysis_status(
-    analysis_id: int = Path(..., alias="id"), repo: AnalysisRepository = Depends()
+    analysis_id: UUID = Path(..., alias="id"), repo: AnalysisRepository = Depends()
 ):
     """
     Get the status of an analysis.
@@ -27,7 +28,7 @@ async def get_analysis_status(
 
 @router.get("/analysis/{id}/results", tags=["Analysis"])
 async def get_analysis_results(
-    analysis_id: int = Path(..., alias="id"),
+    analysis_id: UUID = Path(..., alias="id"),
     analysis_repo: AnalysisRepository = Depends(),
     findings_repo: FindingRepository = Depends(),
     suggestions_repo: SuggestionRepository = Depends(),
@@ -47,7 +48,7 @@ async def get_analysis_results(
 
 @router.post("/analysis/{id}/suggestions/ack", tags=["Analysis"], status_code=204)
 async def acknowledge_suggestion(
-    analysis_id: int = Path(..., alias="id"), suggestion_id: int = Body(..., embed=True)
+    analysis_id: UUID = Path(..., alias="id"), suggestion_id: int = Body(..., embed=True)
 ):
     """
     Acknowledge a suggestion.
@@ -59,7 +60,7 @@ async def acknowledge_suggestion(
 
 @router.post("/analysis/{id}/cancel", tags=["Analysis"], status_code=204)
 async def cancel_analysis(
-    analysis_id: int = Path(..., alias="id"), repo: AnalysisRepository = Depends()
+    analysis_id: UUID = Path(..., alias="id"), repo: AnalysisRepository = Depends()
 ):
     """
     Cancel an ongoing analysis.

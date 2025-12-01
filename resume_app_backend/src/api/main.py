@@ -1,4 +1,5 @@
 from typing import Dict
+from uuid import UUID
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -84,7 +85,7 @@ class AnalyzeTextRequest(BaseModel):
 
 class AnalyzeTextResponse(BaseModel):
     """Response containing analysis id and status."""
-    analysis_id: int = Field(..., description="Created analysis id")
+    analysis_id: UUID = Field(..., description="Created analysis id")
     status: str = Field(..., description="Analysis status after orchestration")
 
 

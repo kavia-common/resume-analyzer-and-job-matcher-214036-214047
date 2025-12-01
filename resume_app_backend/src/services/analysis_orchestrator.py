@@ -1,4 +1,5 @@
 from typing import List, Optional
+from uuid import UUID
 
 from fastapi import BackgroundTasks, Depends
 
@@ -10,6 +11,7 @@ from src.repositories.suggestions import SuggestionRepository
 from src.repositories.jobs import JobRepository
 from src.repositories.recommendations import RecommendationRepository
 from src.repositories.user_preferences import UserPreferenceRepository
+from src.repositories.resumes import ResumeRepository
 from src.services.ats_rules import evaluate_ats_basics
 from src.services.skill_extraction import extract_skills_from_text
 from src.services.recommendations import score_job_match, apply_user_preferences
@@ -28,6 +30,7 @@ class AnalysisOrchestratorService:
         jobs: JobRepository = Depends(),
         recs: RecommendationRepository = Depends(),
         prefs: UserPreferenceRepository = Depends(),
+        resumes: ResumeRepository = Depends(),
     ) -> None:
         self.analyses = analyses
         self.findings = findings
@@ -37,14 +40,23 @@ class AnalysisOrchestratorService:
         self.jobs = jobs
         self.recs = recs
         self.prefs = prefs
+        self.resumes = resumes
 
-    async def _run_analysis_pipeline(self, analysis_id: int, user_id: int, text: Optional[str]) -> None:
+    async def _run_analysis_pipeline(
+        self, analysis_id: UUID, user_id: int, text: Optional[str] = None, resume_id: Optional[int] = None
+    ) -> None:
         """The core analysis pipeline. To be run as a background task or synchronously."""
         try:
             # Set status to running at the beginning of execution
             await self.analyses.update_status(analysis_id, status="running")
 
-            score, findings, missing_core = evaluate_ats_basics(text)
+            analysis_text = text
+            if resume_id and not analysis_text:
+                resume_record = await self.resumes.get(resume_id)
+                if resume_record:
+                    analysis_text = resume_record.get("content_text")
+
+            score, findings, missing_core = evaluate_ats_basics(analysis_text)
 
             # store findings
             for f in findings:
@@ -62,7 +74,7 @@ class AnalysisOrchestratorService:
                 )
 
             # skills
-            extracted = extract_skills_from_text(text)
+            extracted = extract_skills_from_text(analysis_text)
             candidate_skill_names: List[str] = []
             for name, conf, stype in extracted:
                 skill_id = await self.skills.get_or_create(name, stype)
@@ -82,8 +94,8 @@ class AnalysisOrchestratorService:
 
     # PUBLIC_INTERFACE
     async def start_analysis_for_resume(
-        self, user_id: int, resume_id: int, text: Optional[str], background_tasks: BackgroundTasks
-    ) -> int:
+        self, user_id: int, resume_id: int, background_tasks: BackgroundTasks
+    ) -> UUID:
         """Creates an analysis record and schedules the pipeline to run in the background."""
         analysis_id = await self.analyses.create(
             user_id=user_id,
@@ -94,12 +106,12 @@ class AnalysisOrchestratorService:
             score_overall=None,
         )
 
-        background_tasks.add_task(self._run_analysis_pipeline, analysis_id=analysis_id, user_id=user_id, text=text)
+        background_tasks.add_task(self._run_analysis_pipeline, analysis_id=analysis_id, user_id=user_id, resume_id=resume_id)
 
         return analysis_id
 
     # PUBLIC_INTERFACE
-    async def analyze_text(self, user_id: int, text: Optional[str], target_role: Optional[str] = None) -> int:
+    async def analyze_text(self, user_id: int, text: Optional[str], target_role: Optional[str] = None) -> UUID:
         """Create an analysis record, run ATS checks and skill extraction synchronously, and store results."""
         analysis_id = await self.analyses.create(
             user_id=user_id,
@@ -113,7 +125,7 @@ class AnalysisOrchestratorService:
         await self._run_analysis_pipeline(analysis_id, user_id, text)
         return analysis_id
 
-    async def _create_recommendations(self, analysis_id: int, user_id: int, candidate_skills: List[str]) -> None:
+    async def _create_recommendations(self, analysis_id: UUID, user_id: int, candidate_skills: List[str]) -> None:
         """Create recommendations comparing candidate skills to recent jobs, adjusted by preferences."""
         jobs = await self.jobs.list_recent(limit=50)
         prefs = await self.prefs.get_by_user(user_id)
