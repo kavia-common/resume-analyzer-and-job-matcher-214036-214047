@@ -1,0 +1,29 @@
+from typing import List, Optional
+
+from src.repositories.base import BaseRepository
+
+
+class ResumeRepository(BaseRepository):
+    """CRUD operations for resumes table."""
+
+    async def create(self, user_id: int, source: str, url: Optional[str], content_text: Optional[str]) -> int:
+        resume_id = await self.fetchval(
+            """
+            INSERT INTO resumes (user_id, source, url, content_text)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id;
+            """,
+            user_id,
+            source,
+            url,
+            content_text,
+        )
+        return int(resume_id)
+
+    async def get(self, resume_id: int) -> Optional[dict]:
+        rec = await self.fetchrow("SELECT * FROM resumes WHERE id = $1;", resume_id)
+        return self.record_to_dict(rec)
+
+    async def list_by_user(self, user_id: int) -> List[dict]:
+        rows = await self.fetch("SELECT * FROM resumes WHERE user_id = $1 ORDER BY created_at DESC;", user_id)
+        return [dict(r) for r in rows]
