@@ -21,7 +21,7 @@ router = APIRouter()
 async def upload_resume(
     background_tasks: BackgroundTasks,
     file: Annotated[UploadFile, File()],
-    userId: Annotated[int, Form()],
+    user_id: Annotated[int, Form()],
     resume_repo: ResumeRepository = Depends(),
     orchestrator: AnalysisOrchestratorService = Depends(),
 ):
@@ -40,16 +40,16 @@ async def upload_resume(
 
     # 1. Create the resume record first
     resume_id = await resume_repo.create(
-        user_id=userId, source="upload", url=file.filename, content_text=content_text
+        user_id=user_id, source="upload", url=file.filename, content_text=content_text
     )
 
     # 2. Start the analysis in the background
     analysis_id = await orchestrator.start_analysis_for_resume(
-        user_id=userId,
+        user_id=user_id,
         resume_id=resume_id,
         text=content_text,
         background_tasks=background_tasks,
     )
 
     # 3. Return the analysis ID for the client to poll
-    return UploadResponse(analysisId=analysis_id)
+    return UploadResponse(analysis_id=analysis_id)

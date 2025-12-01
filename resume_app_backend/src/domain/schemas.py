@@ -231,7 +231,7 @@ class UserPreference(UserPreferenceBase):
 class UploadResponse(BaseModel):
     """Response model for successful upload."""
 
-    analysisId: int = Field(..., description="Created analysis ID for polling.")
+    analysis_id: int = Field(..., description="Created analysis ID for polling.")
 
 
 class AnalysisStatus(BaseModel):

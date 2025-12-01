@@ -7,7 +7,7 @@ router = APIRouter()
 
 @router.get("/recommendations", tags=["Jobs"])
 async def get_recommendations(
-    analysisId: int,
+    analysis_id: int,
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):
@@ -15,7 +15,7 @@ async def get_recommendations(
     Get job recommendations for a given analysis.
     """
     repo = RecommendationRepository()
-    recommendations = await repo.list_by_analysis_with_jobs(analysisId, limit, offset)
+    recommendations = await repo.list_by_analysis_with_jobs(analysis_id, limit, offset)
     return recommendations
 
 
