@@ -1,3 +1,4 @@
+import logging
 from typing import List, Optional
 from uuid import UUID
 
@@ -15,6 +16,8 @@ from src.repositories.resumes import ResumeRepository
 from src.services.ats_rules import evaluate_ats_basics
 from src.services.skill_extraction import extract_skills_from_text
 from src.services.recommendations import score_job_match, apply_user_preferences
+
+logger = logging.getLogger(__name__)
 
 
 class AnalysisOrchestratorService:
@@ -46,15 +49,24 @@ class AnalysisOrchestratorService:
         self, analysis_id: UUID, user_id: UUID, text: Optional[str] = None, resume_id: Optional[int] = None
     ) -> None:
         """The core analysis pipeline. To be run as a background task or synchronously."""
+        logger.info(f"Starting analysis pipeline for analysis_id='{analysis_id}'")
         try:
             # Set status to running at the beginning of execution
             await self.analyses.update_status(analysis_id, status="running")
+            logger.info(f"Analysis status set to 'running' for analysis_id='{analysis_id}'")
 
             analysis_text = text
             if resume_id and not analysis_text:
+                logger.info(f"Fetching resume text for resume_id={resume_id}")
                 resume_record = await self.resumes.get(resume_id)
                 if resume_record:
                     analysis_text = resume_record.get("content_text")
+                    logger.info(f"Successfully fetched resume text for resume_id={resume_id}")
+                else:
+                    logger.warning(f"Could not find resume record for resume_id={resume_id}")
+
+            if not analysis_text:
+                raise ValueError("Analysis text could not be found or derived.")
 
             score, findings, missing_core = evaluate_ats_basics(analysis_text)
 
@@ -83,11 +95,13 @@ class AnalysisOrchestratorService:
 
             # finalize analysis
             await self.analyses.update_status(analysis_id, status="complete", score_overall=score)
+            logger.info(f"Analysis pipeline completed for analysis_id='{analysis_id}', score={score}")
 
             # generate recommendations
             await self._create_recommendations(analysis_id, user_id, candidate_skill_names)
 
-        except Exception:
+        except Exception as e:
+            logger.error(f"Analysis pipeline failed for analysis_id='{analysis_id}': {e}", exc_info=True)
             await self.analyses.update_status(analysis_id, status="failed", score_overall=None)
             # In a real app, you'd have more robust error logging here.
             raise
@@ -97,6 +111,7 @@ class AnalysisOrchestratorService:
         self, user_id: UUID, resume_id: int, background_tasks: BackgroundTasks
     ) -> UUID:
         """Creates an analysis record and schedules the pipeline to run in the background."""
+        logger.info(f"Creating analysis record for resume_id={resume_id}")
         analysis_id = await self.analyses.create(
             user_id=user_id,
             resume_id=resume_id,
@@ -104,8 +119,10 @@ class AnalysisOrchestratorService:
             target_role=None,
             status="queued",
         )
+        logger.info(f"Analysis record created with id='{analysis_id}', status='queued'")
 
         background_tasks.add_task(self._run_analysis_pipeline, analysis_id=analysis_id, user_id=user_id, resume_id=resume_id)
+        logger.info(f"Background task scheduled for analysis_id='{analysis_id}'")
 
         return analysis_id
 

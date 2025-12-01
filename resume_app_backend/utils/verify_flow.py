@@ -44,7 +44,7 @@ def run_verification():
         analysis_id = response_json.get("analysis_id")
 
         if not analysis_id:
-            print(f"  [FAIL] 'analysis_id' not found in response.")
+            print("  [FAIL] 'analysis_id' not found in response.")
             print(f"  Response JSON: {response_json}")
             return
 
@@ -68,14 +68,14 @@ def run_verification():
                 print(f"  Attempt {i+1}: Status is '{status}'")
 
                 if status == "complete":
-                    print(f"  [SUCCESS] Analysis completed.")
+                    print("  [SUCCESS] Analysis completed.")
                     break
                 elif status == "failed":
-                    print(f"  [FAIL] Analysis failed.")
+                    print("  [FAIL] Analysis failed.")
                     # Still try to fetch results to see if there is more info
                     break
             else:
-                print(f"  [FAIL] Timeout: Analysis did not complete in time.")
+                print("  [FAIL] Timeout: Analysis did not complete in time.")
                 return
         
         # 3. Get results
@@ -86,7 +86,7 @@ def run_verification():
 
         if results_response.status_code != 200:
             print(f"  [FAIL] Expected status 200, but got {results_response.status_code}")
-            print(f"  Response body: {results_response.text}")
+            print(f"  Response body: {response.text}")
             return
 
         print(f"  [SUCCESS] Got status {results_response.status_code}")
@@ -101,7 +101,7 @@ def run_verification():
     except Exception as e:
         print(f"\n[ERROR] An unexpected error occurred: {e}")
     finally:
-        print(f"\n--- Verification Finished ---")
+        print("\n--- Verification Finished ---")
         if os.path.exists(file_path):
             os.remove(file_path)
 
