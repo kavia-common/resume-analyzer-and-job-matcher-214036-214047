@@ -110,10 +110,16 @@ async def upload_resume(
             f"Successfully created resume record with id={resume_id} for user_id='{user_id}'"
         )
 
-        # 2. Start the analysis in the background
+        # 2. Create analysis record and schedule the background task
         logger.info(f"Attempting to start analysis for resume_id={resume_id}")
         analysis_id = await orchestrator.start_analysis_for_resume(
-            user_id=user_id, resume_id=resume_id, background_tasks=background_tasks
+            user_id=user_id, resume_id=resume_id
+        )
+        background_tasks.add_task(
+            orchestrator.run_analysis_pipeline,
+            analysis_id=analysis_id,
+            user_id=user_id,
+            resume_id=resume_id,
         )
         logger.info(
             f"Successfully enqueued analysis with analysis_id='{analysis_id}' for resume_id={resume_id}"

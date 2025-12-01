@@ -2,7 +2,7 @@ import logging
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import BackgroundTasks, Depends
+from fastapi import Depends
 
 from src.repositories.analyses import AnalysisRepository
 from src.repositories.findings import FindingRepository
@@ -45,7 +45,7 @@ class AnalysisOrchestratorService:
         self.prefs = prefs
         self.resumes = resumes
 
-    async def _run_analysis_pipeline(
+    async def run_analysis_pipeline(
         self, analysis_id: UUID, user_id: UUID, text: Optional[str] = None, resume_id: Optional[int] = None
     ) -> None:
         """The core analysis pipeline. To be run as a background task or synchronously."""
@@ -107,9 +107,9 @@ class AnalysisOrchestratorService:
 
     # PUBLIC_INTERFACE
     async def start_analysis_for_resume(
-        self, user_id: UUID, resume_id: int, background_tasks: BackgroundTasks
+        self, user_id: UUID, resume_id: int
     ) -> UUID:
-        """Creates an analysis record and schedules the pipeline to run in the background."""
+        """Creates an analysis record and returns the ID. The caller is responsible for scheduling the pipeline."""
         logger.info(f"Creating analysis record for resume_id={resume_id}")
         analysis_id = await self.analyses.create(
             user_id=user_id,
@@ -119,10 +119,6 @@ class AnalysisOrchestratorService:
             status="queued",
         )
         logger.info(f"Analysis record created with id='{analysis_id}', status='queued'")
-
-        background_tasks.add_task(self._run_analysis_pipeline, analysis_id=analysis_id, user_id=user_id, resume_id=resume_id)
-        logger.info(f"Background task scheduled for analysis_id='{analysis_id}'")
-
         return analysis_id
 
     # PUBLIC_INTERFACE
@@ -137,7 +133,7 @@ class AnalysisOrchestratorService:
             score_overall=None,
         )
 
-        await self._run_analysis_pipeline(analysis_id, user_id, text)
+        await self.run_analysis_pipeline(analysis_id, user_id, text)
         return analysis_id
 
     async def _create_recommendations(self, analysis_id: UUID, user_id: UUID, candidate_skills: List[str]) -> None:
