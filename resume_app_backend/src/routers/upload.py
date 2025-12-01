@@ -14,6 +14,7 @@ from fastapi import (
 
 from src.domain.schemas import UploadResponse
 from src.repositories.resumes import ResumeRepository
+from src.repositories.users import UserRepository
 from src.services.analysis_orchestrator import AnalysisOrchestratorService
 
 # Configure logging
@@ -34,6 +35,7 @@ async def upload_resume(
     user_id: Annotated[UUID, Form()],
     file: Annotated[UploadFile, File()],
     resume_repo: ResumeRepository = Depends(),
+    user_repo: UserRepository = Depends(),
     orchestrator: AnalysisOrchestratorService = Depends(),
 ):
     """
@@ -41,6 +43,11 @@ async def upload_resume(
     The analysis is run in the background. The response contains the ID for status polling.
     """
     logger.info(f"Received resume upload request for user_id='{user_id}'")
+
+    # Validate user existence
+    user = await user_repo.get_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=422, detail=f"User with id '{user_id}' not found.")
 
     if not user_id:
         raise HTTPException(status_code=422, detail="user_id form field is required.")
