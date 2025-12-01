@@ -8,7 +8,7 @@ BASE_URL = "http://localhost:8000"
 UPLOAD_URL = f"{BASE_URL}/api/v1/resumes/upload"
 STATUS_URL_TPL = f"{BASE_URL}/api/v1/analysis/{{analysis_id}}/status"
 RESULTS_URL_TPL = f"{BASE_URL}/api/v1/analysis/{{analysis_id}}/results"
-CREATE_USER_URL = f"{BASE_URL}/dev/create-user"
+CREATE_USER_URL = f"{BASE_URL}/api/v1/dev/create-user"
 TEST_EMAIL = f"test-user-{uuid.uuid4()}@example.com"
 FILE_CONTENT = "This is a simple resume with skills like Python and Java."
 FILE_NAME = "test_resume.txt"
@@ -17,6 +17,7 @@ FILE_NAME = "test_resume.txt"
 def run_verification():
     """Runs the end-to-end verification flow."""
     user_id = None
+    file_path = None
     try:
         print("--- Starting Verification ---")
 
@@ -116,7 +117,7 @@ def run_verification():
         print(f"\n[ERROR] An unexpected error occurred: {e}")
     finally:
         print("\n--- Verification Finished ---")
-        if os.path.exists(file_path):
+        if file_path and os.path.exists(file_path):
             os.remove(file_path)
 
 if __name__ == "__main__":

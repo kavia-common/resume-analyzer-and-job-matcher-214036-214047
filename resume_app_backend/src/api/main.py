@@ -1,16 +1,14 @@
 from typing import Dict
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from src.core.config import get_settings
 from src.core.db import close_db_pool, health_check_db, init_db_pool
-from src.domain.schemas import User, UserCreate
-from src.repositories.users import UserRepository
 from src.services import AnalysisOrchestratorService
-from src.routers import upload, profile, analysis, jobs
+from src.routers import upload, profile, analysis, jobs, dev
 
 openapi_tags = [
     {"name": "Health", "description": "Service liveness and readiness."},
@@ -73,32 +71,11 @@ async def health_check() -> Dict[str, object]:
 
 
 # This is a development-only endpoint for verification scripts, not for production use.
-@app.post("/dev/create-user", response_model=User, tags=["Development"], include_in_schema=False)
-async def create_user_for_testing(
-    user_create: UserCreate, user_repo: UserRepository = Depends()
-):
-    """
-    Creates a user for testing purposes. If the user already exists, it returns the existing user.
-    This is to make the verification script idempotent.
-    """
-    existing_user = await user_repo.get_by_email(user_create.email)
-    if existing_user:
-        return existing_user
-
-    user_id = await user_repo.create(
-        email=user_create.email, full_name=user_create.full_name
-    )
-    created_user = await user_repo.get_by_id(user_id)
-    if not created_user:
-        # This should realistically not happen
-        raise HTTPException(status_code=500, detail="Failed to retrieve user after creation.")
-    return created_user
-
-
 app.include_router(upload.router, prefix="/api/v1")
 app.include_router(profile.router, prefix="/api/v1")
 app.include_router(analysis.router, prefix="/api/v1")
 app.include_router(jobs.router, prefix="/api/v1")
+app.include_router(dev.router)
 
 
 class AnalyzeTextRequest(BaseModel):

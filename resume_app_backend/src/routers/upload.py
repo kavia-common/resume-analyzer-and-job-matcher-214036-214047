@@ -11,6 +11,7 @@ from fastapi import (
     HTTPException,
     UploadFile,
 )
+from asyncpg.exceptions import PostgresError
 
 from src.domain.schemas import UploadResponse
 from src.repositories.resumes import ResumeRepository
@@ -120,6 +121,14 @@ async def upload_resume(
 
         # 3. Return the analysis ID for the client to poll
         return UploadResponse(analysis_id=analysis_id)
+    except PostgresError as e:
+        logger.critical(
+            f"Database error during resume processing for user '{user_id}': {e}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=503, detail="Service temporarily unavailable. Please try again later."
+        )
     except Exception as e:
         logger.error(
             f"Critical error during resume processing for user '{user_id}': {e}",

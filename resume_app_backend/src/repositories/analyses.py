@@ -1,7 +1,10 @@
+import logging
 from typing import List, Optional
 from uuid import UUID, uuid4
 
 from src.repositories.base import BaseRepository
+
+logger = logging.getLogger(__name__)
 
 
 class AnalysisRepository(BaseRepository):
@@ -16,21 +19,28 @@ class AnalysisRepository(BaseRepository):
         status: str,
         score_overall: Optional[float] = None,
     ) -> UUID:
-        analysis_id = await self.fetchval(
-            """
-            INSERT INTO analyses (id, user_id, resume_id, profile_id, target_role, status, score_overall)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-            RETURNING id;
-            """,
-            uuid4(),
-            user_id,
-            resume_id,
-            profile_id,
-            target_role,
-            status,
-            score_overall,
-        )
-        return analysis_id
+        try:
+            analysis_id = await self.fetchval(
+                """
+                INSERT INTO analyses (id, user_id, resume_id, profile_id, target_role, status, score_overall)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                RETURNING id;
+                """,
+                uuid4(),
+                user_id,
+                resume_id,
+                profile_id,
+                target_role,
+                status,
+                score_overall,
+            )
+            return analysis_id
+        except Exception as e:
+            logger.error(
+                f"DB error creating analysis for user_id='{user_id}', resume_id='{resume_id}': {e}",
+                exc_info=True,
+            )
+            raise
 
     async def get(self, analysis_id: UUID) -> Optional[dict]:
         rec = await self.fetchrow("SELECT * FROM analyses WHERE id = $1;", analysis_id)
