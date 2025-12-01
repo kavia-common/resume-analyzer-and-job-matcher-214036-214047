@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from src.repositories.profiles import ProfileRepository
@@ -13,13 +13,16 @@ class SubmitUrlRequest(BaseModel):
 
 
 @router.post("/profiles/submit-url", tags=["Profiles"], status_code=202)
-async def submit_profile_url(req: SubmitUrlRequest):
+async def submit_profile_url(
+    req: SubmitUrlRequest,
+    profile_repo: ProfileRepository = Depends(),
+    orchestrator: AnalysisOrchestratorService = Depends(),
+):
     """
     Submit a profile URL for analysis.
     """
     # In a real app, this would trigger a background job to scrape the URL.
     # For now, we'll just create a placeholder profile and analysis.
-    profile_repo = ProfileRepository()
     profile_id = await profile_repo.create(
         user_id=req.user_id,
         platform="linkedin",  # Assuming linkedin for now
@@ -29,7 +32,8 @@ async def submit_profile_url(req: SubmitUrlRequest):
         data_json={},
     )
 
-    orchestrator = AnalysisOrchestratorService()
-    analysis_id = await orchestrator.analyze_text(user_id=req.user_id, text="Placeholder Summary")
+    analysis_id = await orchestrator.analyze_text(
+        user_id=req.user_id, text="Placeholder Summary"
+    )
 
     return {"profile_id": profile_id, "analysis_id": analysis_id}

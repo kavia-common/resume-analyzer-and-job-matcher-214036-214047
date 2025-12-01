@@ -1,7 +1,7 @@
 from typing import Dict
 from uuid import UUID
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -96,8 +96,11 @@ class AnalyzeTextResponse(BaseModel):
     tags=["Analysis"],
     response_model=AnalyzeTextResponse,
 )
-async def analyze_text(req: AnalyzeTextRequest) -> AnalyzeTextResponse:
+async def analyze_text(
+    req: AnalyzeTextRequest, svc: AnalysisOrchestratorService = Depends()
+) -> AnalyzeTextResponse:
     """Run analysis orchestration for provided text and return the analysis id."""
-    svc = AnalysisOrchestratorService()
-    analysis_id = await svc.analyze_text(user_id=req.user_id, text=req.text, target_role=req.target_role)
+    analysis_id = await svc.analyze_text(
+        user_id=req.user_id, text=req.text, target_role=req.target_role
+    )
     return AnalyzeTextResponse(analysis_id=analysis_id, status="complete")

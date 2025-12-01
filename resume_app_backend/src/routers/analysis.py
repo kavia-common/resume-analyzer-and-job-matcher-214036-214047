@@ -11,9 +11,14 @@ from src.repositories.suggestions import SuggestionRepository
 router = APIRouter()
 
 
-@router.get("/analysis/{id}/status", tags=["Analysis"], response_model=AnalysisStatus)
+@router.get(
+    "/analysis/{id}/status",
+    tags=["Analysis"],
+    response_model=AnalysisStatus,
+)
 async def get_analysis_status(
-    analysis_id: UUID = Path(..., alias="id"), repo: AnalysisRepository = Depends()
+    analysis_id: UUID = Path(..., alias="id"),
+    repo: AnalysisRepository = Depends(),
 ):
     """
     Get the status of an analysis.
@@ -46,9 +51,14 @@ async def get_analysis_results(
     return {"analysis": analysis, "findings": findings, "suggestions": suggestions}
 
 
-@router.post("/analysis/{id}/suggestions/ack", tags=["Analysis"], status_code=204)
+@router.post(
+    "/analysis/{id}/suggestions/ack",
+    tags=["Analysis"],
+    status_code=204,
+)
 async def acknowledge_suggestion(
-    analysis_id: UUID = Path(..., alias="id"), suggestion_id: int = Body(..., embed=True)
+    analysis_id: UUID = Path(..., alias="id"),
+    suggestion_id: int = Body(..., embed=True),
 ):
     """
     Acknowledge a suggestion.
@@ -60,7 +70,8 @@ async def acknowledge_suggestion(
 
 @router.post("/analysis/{id}/cancel", tags=["Analysis"], status_code=204)
 async def cancel_analysis(
-    analysis_id: UUID = Path(..., alias="id"), repo: AnalysisRepository = Depends()
+    analysis_id: UUID = Path(..., alias="id"),
+    repo: AnalysisRepository = Depends(),
 ):
     """
     Cancel an ongoing analysis.
@@ -72,9 +83,14 @@ async def cancel_analysis(
     return
 
 
-@router.get("/users/{userId}/analyses", tags=["Users"], response_model=List[Analysis])
+@router.get(
+    "/users/{userId}/analyses",
+    tags=["Users"],
+    response_model=List[Analysis],
+)
 async def get_user_analyses(
-    user_id: int = Path(..., alias="userId"), repo: AnalysisRepository = Depends()
+    user_id: int = Path(..., alias="userId"),
+    repo: AnalysisRepository = Depends(),
 ):
     """
     Get all analyses for a user.

@@ -17,11 +17,18 @@ from src.services.analysis_orchestrator import AnalysisOrchestratorService
 router = APIRouter()
 
 
-@router.post("/resumes/upload", tags=["Resumes"], status_code=201, response_model=UploadResponse)
+@router.post(
+    "/resumes/upload",
+    tags=["Resumes"],
+    status_code=201,
+    response_model=UploadResponse,
+)
 async def upload_resume(
     background_tasks: BackgroundTasks,
     file: Annotated[UploadFile, File()],
     user_id: Annotated[int, Form()],
+    resume_repo: ResumeRepository = Depends(),
+    orchestrator: AnalysisOrchestratorService = Depends(),
 ):
     """
     Upload a resume file, parse it, and create an analysis.
@@ -55,10 +62,6 @@ async def upload_resume(
         raise HTTPException(
             status_code=422, detail="File appears to be empty or could not be read."
         )
-
-    # Instantiate repositories and services directly
-    resume_repo = ResumeRepository()
-    orchestrator = AnalysisOrchestratorService()
 
     # 1. Create the resume record first
     resume_id = await resume_repo.create(
