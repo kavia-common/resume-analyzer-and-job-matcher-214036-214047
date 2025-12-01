@@ -1,5 +1,7 @@
 from typing import List, Optional
 
+from fastapi import BackgroundTasks
+
 from src.repositories.analyses import AnalysisRepository
 from src.repositories.findings import FindingRepository
 from src.repositories.skills import SkillRepository
@@ -26,19 +28,12 @@ class AnalysisOrchestratorService:
         self.recs = RecommendationRepository()
         self.prefs = UserPreferenceRepository()
 
-    # PUBLIC_INTERFACE
-    async def analyze_text(self, user_id: int, text: Optional[str], target_role: Optional[str] = None) -> int:
-        """Create an analysis record, run ATS checks and skill extraction, and store results."""
-        analysis_id = await self.analyses.create(
-            user_id=user_id,
-            resume_id=None,
-            profile_id=None,
-            target_role=target_role,
-            status="running",
-            score_overall=None,
-        )
-
+    async def _run_analysis_pipeline(self, analysis_id: int, user_id: int, text: Optional[str]) -> None:
+        """The core analysis pipeline. To be run as a background task or synchronously."""
         try:
+            # Set status to running at the beginning of execution
+            await self.analyses.update_status(analysis_id, status="running")
+
             score, findings, missing_core = evaluate_ats_basics(text)
 
             # store findings
@@ -70,10 +65,43 @@ class AnalysisOrchestratorService:
             # generate recommendations
             await self._create_recommendations(analysis_id, user_id, candidate_skill_names)
 
-            return analysis_id
         except Exception:
             await self.analyses.update_status(analysis_id, status="failed", score_overall=None)
+            # In a real app, you'd have more robust error logging here.
             raise
+
+    # PUBLIC_INTERFACE
+    async def start_analysis_for_resume(
+        self, user_id: int, resume_id: int, text: Optional[str], background_tasks: BackgroundTasks
+    ) -> int:
+        """Creates an analysis record and schedules the pipeline to run in the background."""
+        analysis_id = await self.analyses.create(
+            user_id=user_id,
+            resume_id=resume_id,
+            profile_id=None,
+            target_role=None,
+            status="queued",
+            score_overall=None,
+        )
+
+        background_tasks.add_task(self._run_analysis_pipeline, analysis_id=analysis_id, user_id=user_id, text=text)
+
+        return analysis_id
+
+    # PUBLIC_INTERFACE
+    async def analyze_text(self, user_id: int, text: Optional[str], target_role: Optional[str] = None) -> int:
+        """Create an analysis record, run ATS checks and skill extraction synchronously, and store results."""
+        analysis_id = await self.analyses.create(
+            user_id=user_id,
+            resume_id=None,
+            profile_id=None,
+            target_role=target_role,
+            status="running",  # Start as running since it's sync
+            score_overall=None,
+        )
+
+        await self._run_analysis_pipeline(analysis_id, user_id, text)
+        return analysis_id
 
     async def _create_recommendations(self, analysis_id: int, user_id: int, candidate_skills: List[str]) -> None:
         """Create recommendations comparing candidate skills to recent jobs, adjusted by preferences."""
