@@ -63,16 +63,16 @@ class Settings(BaseSettings):
         """Return a usable PostgreSQL DSN string if available; otherwise None.
 
         Priority:
-        1) Use DATABASE_URL if provided.
-        2) Construct DSN from POSTGRES_* values if all are present.
+        1) Construct DSN from POSTGRES_* values if all are present. This is the preferred, safer method.
+        2) Use DATABASE_URL as a fallback if the above is not possible.
         """
-        if self.DATABASE_URL:
-            return self.DATABASE_URL
         if all([self.POSTGRES_USER, self.POSTGRES_PASSWORD, self.POSTGRES_HOST, self.POSTGRES_PORT, self.POSTGRES_DB]):
             return (
                 f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
                 f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
             )
+        if self.DATABASE_URL:
+            return self.DATABASE_URL
         return None
 
 

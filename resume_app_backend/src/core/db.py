@@ -28,6 +28,7 @@ async def init_db_pool() -> Optional[asyncpg.Pool]:
         logger.info("Database settings not provided; continuing without database.")
         return None
 
+    logger.info("Database DSN configured. Attempting to create connection pool.")
     try:
         _pool = await asyncpg.create_pool(
             dsn=dsn,
