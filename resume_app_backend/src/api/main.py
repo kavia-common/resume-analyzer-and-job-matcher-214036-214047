@@ -7,10 +7,15 @@ from pydantic import BaseModel, Field
 from src.core.config import get_settings
 from src.core.db import close_db_pool, health_check_db, init_db_pool
 from src.services import AnalysisOrchestratorService
+from src.routers import upload, profile, analysis, jobs
 
 openapi_tags = [
     {"name": "Health", "description": "Service liveness and readiness."},
     {"name": "Analysis", "description": "Run ATS analysis and view results."},
+    {"name": "Resumes", "description": "Upload and manage resumes."},
+    {"name": "Profiles", "description": "Manage user profiles from external sites."},
+    {"name": "Jobs", "description": "Get job recommendations."},
+    {"name": "Users", "description": "Manage users."},
 ]
 
 app = FastAPI(
@@ -62,6 +67,12 @@ async def health_check() -> Dict[str, object]:
     """Health check route that returns service status and DB readiness (if configured)."""
     db_ok = await health_check_db()
     return {"message": "Healthy", "database": db_ok}
+
+
+app.include_router(upload.router, prefix="/api/v1")
+app.include_router(profile.router, prefix="/api/v1")
+app.include_router(analysis.router, prefix="/api/v1")
+app.include_router(jobs.router, prefix="/api/v1")
 
 
 class AnalyzeTextRequest(BaseModel):
