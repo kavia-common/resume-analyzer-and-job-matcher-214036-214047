@@ -18,17 +18,19 @@ class UserCreate(UserBase):
 
 class User(UserBase):
     """Schema representing a persisted user."""
-    id: int = Field(..., description="Primary key")
+    id: UUID = Field(..., description="Primary key")
     created_at: datetime = Field(..., description="Creation timestamp")
 
 
 # PUBLIC_INTERFACE
 class ResumeBase(BaseModel):
     """Base schema for a resume record."""
-    user_id: int = Field(..., description="Owner user id (FK users.id)")
-    source: str = Field(..., description="Source type: upload, linkedin, naukri, etc.")
-    url: Optional[str] = Field(None, description="Source URL when available")
+
+    user_id: UUID = Field(..., description="Owner user id (FK users.id)")
+    file_name: str = Field(..., description="Original name of the uploaded file")
+    content_type: str = Field(..., description="MIME type of the uploaded file")
     content_text: Optional[str] = Field(None, description="Extracted plain text content")
+    storage_path: Optional[str] = Field(None, description="Path to file in object storage (if used)")
 
 
 class ResumeCreate(ResumeBase):
@@ -45,7 +47,7 @@ class Resume(ResumeBase):
 # PUBLIC_INTERFACE
 class ProfileBase(BaseModel):
     """Base schema for a user profile snapshot."""
-    user_id: int = Field(..., description="Owner user id")
+    user_id: UUID = Field(..., description="Owner user id")
     platform: str = Field(..., description="Profile platform (linkedin, naukri, etc.)")
     url: str = Field(..., description="Profile URL")
     headline: Optional[str] = Field(None, description="Profile headline or title")
@@ -68,7 +70,7 @@ class Profile(ProfileBase):
 class AnalysisBase(BaseModel):
     """Base schema for an analysis run over a resume or profile."""
     id: UUID = Field(..., description="Primary key")
-    user_id: int = Field(..., description="Owner user id")
+    user_id: UUID = Field(..., description="Owner user id")
     resume_id: Optional[int] = Field(None, description="Analyzed resume id")
     profile_id: Optional[int] = Field(None, description="Analyzed profile id")
     target_role: Optional[str] = Field(None, description="Target role used for analysis")
@@ -210,7 +212,7 @@ class Recommendation(RecommendationBase):
 # PUBLIC_INTERFACE
 class UserPreferenceBase(BaseModel):
     """Base schema for a user's preference regarding job recommendations."""
-    user_id: int = Field(..., description="FK users.id")
+    user_id: UUID = Field(..., description="FK users.id")
     locations: Optional[List[str]] = Field(None, description="Preferred locations")
     roles: Optional[List[str]] = Field(None, description="Preferred roles")
     remote_ok: Optional[bool] = Field(None, description="Whether remote jobs are acceptable")

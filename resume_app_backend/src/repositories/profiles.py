@@ -1,4 +1,5 @@
 from typing import Optional
+from uuid import UUID
 
 from src.repositories.base import BaseRepository
 
@@ -8,7 +9,7 @@ class ProfileRepository(BaseRepository):
 
     async def create(
         self,
-        user_id: int,
+        user_id: UUID,
         platform: str,
         url: str,
         headline: Optional[str],

@@ -9,7 +9,7 @@ class AnalysisRepository(BaseRepository):
 
     async def create(
         self,
-        user_id: int,
+        user_id: UUID,
         resume_id: Optional[int],
         profile_id: Optional[int],
         target_role: Optional[str],
@@ -44,6 +44,6 @@ class AnalysisRepository(BaseRepository):
             analysis_id,
         )
 
-    async def list_by_user(self, user_id: int) -> List[dict]:
+    async def list_by_user(self, user_id: UUID) -> List[dict]:
         rows = await self.fetch("SELECT * FROM analyses WHERE user_id = $1 ORDER BY created_at DESC;", user_id)
         return [dict(r) for r in rows]

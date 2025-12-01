@@ -78,7 +78,7 @@ app.include_router(jobs.router, prefix="/api/v1")
 
 class AnalyzeTextRequest(BaseModel):
     """Request model for text analysis."""
-    user_id: int = Field(..., description="User identifier for whom the analysis is created")
+    user_id: UUID = Field(..., description="User identifier for whom the analysis is created")
     text: str | None = Field(None, description="Plain text content to analyze")
     target_role: str | None = Field(None, description="Target role to guide suggestions")
 

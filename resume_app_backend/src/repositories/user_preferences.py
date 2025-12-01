@@ -1,4 +1,5 @@
 from typing import Optional
+from uuid import UUID
 
 from src.repositories.base import BaseRepository
 
@@ -8,7 +9,7 @@ class UserPreferenceRepository(BaseRepository):
 
     async def upsert(
         self,
-        user_id: int,
+        user_id: UUID,
         locations: Optional[list[str]],
         roles: Optional[list[str]],
         remote_ok: Optional[bool],
@@ -36,6 +37,6 @@ class UserPreferenceRepository(BaseRepository):
         )
         return int(pref_id)
 
-    async def get_by_user(self, user_id: int) -> Optional[dict]:
+    async def get_by_user(self, user_id: UUID) -> Optional[dict]:
         rec = await self.fetchrow("SELECT * FROM user_preferences WHERE user_id = $1;", user_id)
         return self.record_to_dict(rec)

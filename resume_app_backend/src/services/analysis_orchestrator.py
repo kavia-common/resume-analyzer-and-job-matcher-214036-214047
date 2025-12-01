@@ -43,7 +43,7 @@ class AnalysisOrchestratorService:
         self.resumes = resumes
 
     async def _run_analysis_pipeline(
-        self, analysis_id: UUID, user_id: int, text: Optional[str] = None, resume_id: Optional[int] = None
+        self, analysis_id: UUID, user_id: UUID, text: Optional[str] = None, resume_id: Optional[int] = None
     ) -> None:
         """The core analysis pipeline. To be run as a background task or synchronously."""
         try:
@@ -94,7 +94,7 @@ class AnalysisOrchestratorService:
 
     # PUBLIC_INTERFACE
     async def start_analysis_for_resume(
-        self, user_id: int, resume_id: int, background_tasks: BackgroundTasks
+        self, user_id: UUID, resume_id: int, background_tasks: BackgroundTasks
     ) -> UUID:
         """Creates an analysis record and schedules the pipeline to run in the background."""
         analysis_id = await self.analyses.create(
@@ -103,7 +103,6 @@ class AnalysisOrchestratorService:
             profile_id=None,
             target_role=None,
             status="queued",
-            score_overall=None,
         )
 
         background_tasks.add_task(self._run_analysis_pipeline, analysis_id=analysis_id, user_id=user_id, resume_id=resume_id)
@@ -111,7 +110,7 @@ class AnalysisOrchestratorService:
         return analysis_id
 
     # PUBLIC_INTERFACE
-    async def analyze_text(self, user_id: int, text: Optional[str], target_role: Optional[str] = None) -> UUID:
+    async def analyze_text(self, user_id: UUID, text: Optional[str], target_role: Optional[str] = None) -> UUID:
         """Create an analysis record, run ATS checks and skill extraction synchronously, and store results."""
         analysis_id = await self.analyses.create(
             user_id=user_id,
@@ -125,7 +124,7 @@ class AnalysisOrchestratorService:
         await self._run_analysis_pipeline(analysis_id, user_id, text)
         return analysis_id
 
-    async def _create_recommendations(self, analysis_id: UUID, user_id: int, candidate_skills: List[str]) -> None:
+    async def _create_recommendations(self, analysis_id: UUID, user_id: UUID, candidate_skills: List[str]) -> None:
         """Create recommendations comparing candidate skills to recent jobs, adjusted by preferences."""
         jobs = await self.jobs.list_recent(limit=50)
         prefs = await self.prefs.get_by_user(user_id)

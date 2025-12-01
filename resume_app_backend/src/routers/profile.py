@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
@@ -8,7 +9,7 @@ router = APIRouter()
 
 
 class SubmitUrlRequest(BaseModel):
-    user_id: int = Field(..., description="User ID")
+    user_id: UUID = Field(..., description="User ID")
     profile_url: str = Field(..., description="URL of the profile to analyze")
 
 

@@ -6,17 +6,25 @@ from src.repositories.base import BaseRepository
 class ResumeRepository(BaseRepository):
     """CRUD operations for resumes table."""
 
-    async def create(self, user_id: int, source: str, url: Optional[str], content_text: Optional[str]) -> int:
+    async def create(
+        self,
+        user_id: int,
+        file_name: str,
+        content_type: str,
+        content_text: Optional[str] = None,
+        storage_path: Optional[str] = None,
+    ) -> int:
         resume_id = await self.fetchval(
             """
-            INSERT INTO resumes (user_id, source, url, content_text)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO resumes (user_id, file_name, content_type, content_text, storage_path)
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING id;
             """,
             user_id,
-            source,
-            url,
+            file_name,
+            content_type,
             content_text,
+            storage_path,
         )
         return int(resume_id)
 

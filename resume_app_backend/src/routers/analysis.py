@@ -89,7 +89,7 @@ async def cancel_analysis(
     response_model=List[Analysis],
 )
 async def get_user_analyses(
-    user_id: int = Path(..., alias="userId"),
+    user_id: UUID = Path(..., alias="userId"),
     repo: AnalysisRepository = Depends(),
 ):
     """

@@ -1,5 +1,6 @@
 import logging
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import (
     APIRouter,
@@ -30,8 +31,8 @@ router = APIRouter()
 )
 async def upload_resume(
     background_tasks: BackgroundTasks,
+    user_id: Annotated[UUID, Form()],
     file: Annotated[UploadFile, File()],
-    user_id: Annotated[int, Form()],
     resume_repo: ResumeRepository = Depends(),
     orchestrator: AnalysisOrchestratorService = Depends(),
 ):
@@ -59,7 +60,7 @@ async def upload_resume(
         # Basic text extraction, a real implementation would use a library like textract
         content_text = content.decode("utf-8", errors="ignore")
     except Exception as e:
-        logger.error(f"Error reading or decoding file: {e}", exc_info=True)
+        logger.error(f"Error reading or decoding file '{file.filename}' for user {user_id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=422, detail=f"Error reading or decoding file: {e}"
         )
@@ -71,24 +72,23 @@ async def upload_resume(
 
     try:
         # 1. Create the resume record first
-        logger.info(f"Creating resume record for user {user_id} and file {file.filename}")
+        logger.info(f"Creating resume record for user_id='{user_id}' file='{file.filename}' content_type='{file.content_type}'")
         resume_id = await resume_repo.create(
             user_id=user_id,
-            source="upload",
-            url=file.filename,
+            file_name=file.filename,
+            content_type=file.content_type,
             content_text=content_text,
         )
-        logger.info(f"Resume record created with ID: {resume_id}")
+        logger.info(f"Resume record created with id={resume_id} for user_id='{user_id}'")
 
         # 2. Start the analysis in the background
-        logger.info(f"Starting analysis for resume_id {resume_id}")
         analysis_id = await orchestrator.start_analysis_for_resume(
             user_id=user_id, resume_id=resume_id, background_tasks=background_tasks
         )
-        logger.info(f"Analysis started with ID: {analysis_id}")
+        logger.info(f"Analysis task enqueued with analysis_id='{analysis_id}' for resume_id={resume_id}")
 
         # 3. Return the analysis ID for the client to poll
-        return UploadResponse(analysis_id=analysis_id)
+        return {"analysis_id": analysis_id}
     except Exception as e:
-        logger.error(f"Error during resume upload and analysis start: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+        logger.error(f"Error creating resume or starting analysis for user {user_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error while processing resume.")
