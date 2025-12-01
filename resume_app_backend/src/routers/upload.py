@@ -63,18 +63,21 @@ async def upload_resume(
             status_code=422, detail="File appears to be empty or could not be read."
         )
 
-    # 1. Create the resume record first
-    resume_id = await resume_repo.create(
-        user_id=user_id,
-        source="upload",
-        url=file.filename,
-        content_text=content_text,
-    )
+    try:
+        # 1. Create the resume record first
+        resume_id = await resume_repo.create(
+            user_id=user_id,
+            source="upload",
+            url=file.filename,
+            content_text=content_text,
+        )
 
-    # 2. Start the analysis in the background
-    analysis_id = await orchestrator.start_analysis_for_resume(
-        user_id=user_id, resume_id=resume_id, background_tasks=background_tasks
-    )
+        # 2. Start the analysis in the background
+        analysis_id = await orchestrator.start_analysis_for_resume(
+            user_id=user_id, resume_id=resume_id, background_tasks=background_tasks
+        )
 
-    # 3. Return the analysis ID for the client to poll
-    return UploadResponse(analysis_id=analysis_id)
+        # 3. Return the analysis ID for the client to poll
+        return UploadResponse(analysis_id=analysis_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
