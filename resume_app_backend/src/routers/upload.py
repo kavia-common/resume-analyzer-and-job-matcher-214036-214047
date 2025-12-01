@@ -1,4 +1,4 @@
-from fastapi import APIRouter, File, UploadFile, Form, HTTPException, BackgroundTasks
+from fastapi import APIRouter, File, UploadFile, Form, HTTPException, BackgroundTasks, Depends
 from typing import Annotated
 
 from src.services.analysis_orchestrator import AnalysisOrchestratorService
@@ -7,11 +7,23 @@ from src.repositories.resumes import ResumeRepository
 router = APIRouter()
 
 
+def get_resume_repo() -> ResumeRepository:
+    return ResumeRepository()
+
+
+def get_orchestrator_service() -> AnalysisOrchestratorService:
+    return AnalysisOrchestratorService()
+
+
 @router.post("/resumes/upload", tags=["Resumes"], status_code=201)
 async def upload_resume(
     background_tasks: BackgroundTasks,
     file: Annotated[UploadFile, File()],
     user_id: Annotated[int, Form()],
+    resume_repo: Annotated[ResumeRepository, Depends(get_resume_repo)],
+    orchestrator: Annotated[
+        AnalysisOrchestratorService, Depends(get_orchestrator_service)
+    ],
 ):
     """
     Upload a resume file, parse it, and create an analysis.
@@ -27,13 +39,11 @@ async def upload_resume(
         raise HTTPException(status_code=400, detail=f"Error reading or decoding file: {e}")
 
     # 1. Create the resume record first
-    resume_repo = ResumeRepository()
     resume_id = await resume_repo.create(
         user_id=user_id, source="upload", url=file.filename, content_text=content_text
     )
 
     # 2. Start the analysis in the background
-    orchestrator = AnalysisOrchestratorService()
     analysis_id = await orchestrator.start_analysis_for_resume(
         user_id=user_id,
         resume_id=resume_id,
