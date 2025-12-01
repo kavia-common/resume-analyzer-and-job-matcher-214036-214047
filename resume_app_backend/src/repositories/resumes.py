@@ -1,4 +1,5 @@
 from typing import List, Optional
+from uuid import UUID
 
 from src.repositories.base import BaseRepository
 
@@ -8,7 +9,7 @@ class ResumeRepository(BaseRepository):
 
     async def create(
         self,
-        user_id: int,
+        user_id: UUID,
         file_name: str,
         content_type: str,
         content_text: Optional[str] = None,
@@ -32,6 +33,6 @@ class ResumeRepository(BaseRepository):
         rec = await self.fetchrow("SELECT * FROM resumes WHERE id = $1;", resume_id)
         return self.record_to_dict(rec)
 
-    async def list_by_user(self, user_id: int) -> List[dict]:
+    async def list_by_user(self, user_id: UUID) -> List[dict]:
         rows = await self.fetch("SELECT * FROM resumes WHERE user_id = $1 ORDER BY created_at DESC;", user_id)
         return [dict(r) for r in rows]
